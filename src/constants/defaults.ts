@@ -1,0 +1,66 @@
+import type { ColorScheme } from '../types/theme';
+
+export const DEFAULT_SCHEME: ColorScheme = {
+  name: 'Singularity',
+  description: 'The void speaks in teal. Deep oceanic silence on pure black.',
+  seed: 'singularity',
+  style: 'monochrome',
+  hue: 180,
+  createdAt: new Date().toISOString(),
+  core: {
+    background:   '#000000',
+    foreground:   '#607575',
+    accent:       '#4a7a7a',
+    accent_bright:'#33ffff',
+    cursor:       '#33ffff',
+    selection_bg: '#101a1d',
+    selection_fg: '#809a9a',
+  },
+  terminal: {
+    color0:  '#0d1011',
+    color1:  '#523333',
+    color2:  '#335240',
+    color3:  '#524833',
+    color4:  '#334052',
+    color5:  '#483352',
+    color6:  '#335252',
+    color7:  '#505a5a',
+    color8:  '#2a3233',
+    color9:  '#7a4a4a',
+    color10: '#4a7a5c',
+    color11: '#7a6a4a',
+    color12: '#4a5c7a',
+    color13: '#6a4a7a',
+    color14: '#4a7a7a',
+    color15: '#708282',
+  },
+};
+
+export const SCHEME_STYLES = [
+  { value: 'monochrome',          label: 'Monochrome',          desc: 'Single hue variations' },
+  { value: 'complementary',       label: 'Complementary',       desc: 'Opposite hues' },
+  { value: 'triadic',             label: 'Triadic',             desc: '3-way color harmony' },
+  { value: 'analogous',           label: 'Analogous',           desc: 'Adjacent hues' },
+  { value: 'split-complementary', label: 'Split Complementary', desc: 'Split opposite hues' },
+  { value: 'tetradic',            label: 'Tetradic',            desc: '4-point color harmony' },
+  { value: 'spectral',            label: 'Spectral',            desc: 'Full spectrum chaos' },
+] as const;
+
+export const ANSI_ROLE_LABELS: Record<string, string> = {
+  color0:  'Black (Dark BG)',
+  color1:  'Red (Error)',
+  color2:  'Green (Success)',
+  color3:  'Yellow (Warning)',
+  color4:  'Blue (Info)',
+  color5:  'Magenta (Special)',
+  color6:  'Cyan (Accent)',
+  color7:  'White (Foreground)',
+  color8:  'Bright Black',
+  color9:  'Bright Red',
+  color10: 'Bright Green',
+  color11: 'Bright Yellow',
+  color12: 'Bright Blue',
+  color13: 'Bright Magenta',
+  color14: 'Bright Cyan',
+  color15: 'Spectral Silver',
+};

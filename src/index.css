@@ -1,0 +1,106 @@
+@import url('https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=DM+Sans:wght@300;400;500&family=Orbitron:wght@400;700;900&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+
+@layer base {
+  :root {
+    /* Hyper-Light Creative Theme */
+    --void: #fafafa;
+    --surface: #ffffff;
+    --base: #f4f4f5;
+    --layer: #e4e4e7;
+    --dim: #a1a1aa;
+    --dim-brt: #71717a;
+    --fg: #27272a;
+    --cyan: #ff2a6d; /* Cyberpink punch */
+    --accent: #6366f1; /* Deep Indigo */
+    --accent-dim: #e0e7ff;
+    
+    --success: #16a34a;
+    --success-dim: #dcfce7;
+    --warning: #d97706;
+    --warning-dim: #fef3c7;
+    --error: #dc2626;
+    --error-dim: #fee2e2;
+  }
+
+  .dark {
+    /* Pure Black Omarchy Theme */
+    --void: #000000;
+    --surface: #050d0d;
+    --base: #0a1a1a;
+    --layer: #0d1a1a;
+    --dim: #304040;
+    --dim-brt: #405050;
+    --fg: #607575;
+    --cyan: #33ffff;
+    --accent: #4a7a7a;
+    --accent-dim: #335252;
+    
+    --success: #4a7a5c;
+    --success-dim: #0a1a10;
+    --warning: #7a6a4a;
+    --warning-dim: #1a1500;
+    --error: #7a4a4a;
+    --error-dim: #1a0a0a;
+  }
+
+  body {
+    background-color: var(--void);
+    color: var(--fg);
+    font-family: "DM Sans", sans-serif;
+    -webkit-font-smoothing: antialiased;
+    transition: background-color 0.3s ease, color 0.3s ease;
+  }
+}
+
+.font-mono {
+  font-family: "Space Mono", monospace;
+}
+.font-display {
+  font-family: "Orbitron", sans-serif;
+}
+
+/* Subtle scanline overlay for CRT feel */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0, 0, 0, 0.015) 2px,
+    rgba(0, 0, 0, 0.015) 4px
+  );
+  pointer-events: none;
+  z-index: 9999;
+}
+
+@keyframes blink {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0;
+  }
+}
+
+/* Custom range input */
+input[type="range"] {
+  -webkit-appearance: none;
+  height: 12px;
+}
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #33ffff;
+  cursor: pointer;
+  box-shadow: 0 0 8px #33ffff80;
+}
