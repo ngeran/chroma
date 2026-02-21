@@ -1,9 +1,10 @@
 /**
  * ChromaVoid Color Analyzer
- * WCAG contrast, OLED luminance scoring, harmony analysis.
+ * WCAG contrast, enhanced OLED risk assessment, harmony analysis.
  */
 
 import type { ColorScheme, AnalysisResult } from '../types/theme';
+import { assessEnhancedOLERRisk } from './enhancedOLERRiskControl';
 
 function hexToRgb(hex: string): [number, number, number] {
   const r = parseInt(hex.slice(1, 3), 16);
@@ -46,13 +47,22 @@ export function analyzeColorScheme(scheme: ColorScheme): AnalysisResult {
     ...Object.values(scheme.terminal),
   ].filter(v => typeof v === 'string' && v.startsWith('#'));
 
-  // ── OLED Score: avg pixel brightness (lower = better for OLED)
-  const avgBrightness = allColors.reduce((sum, c) => sum + pixelBrightness(c), 0) / allColors.length;
-  const oledScore = Math.round((1 - avgBrightness) * 100);
-
-  // ── Burn-in risk
-  const maxBrightness = Math.max(...allColors.map(pixelBrightness));
-  const burnInRisk = maxBrightness > 0.7 ? 'high' : maxBrightness > 0.45 ? 'medium' : 'low';
+  // ── Enhanced OLED Risk Assessment
+  // Convert hex colors to OKLCH format for risk assessment (simplified)
+  const colorMap: Record<string, { L: number; C: number; h: number }> = {};
+  allColors.forEach(color => {
+    // Simplified conversion for risk assessment
+    const brightness = pixelBrightness(color);
+    colorMap[color] = {
+      L: brightness,
+      C: 0.1, // Simplified chroma
+      h: 180,  // Simplified hue
+    };
+  });
+  
+  const riskAssessment = assessEnhancedOLERRisk(colorMap, 'balanced');
+  const oledScore = Math.round((100 - riskAssessment.overallScore) * 0.8); // Convert to 0-100 scale
+  const burnInRisk = riskAssessment.overallRisk;
 
   // ── WCAG Contrast
   const fgRatio     = contrastRatio(scheme.core.foreground,    bg);

@@ -1,7 +1,7 @@
 import { useThemeStore } from '../stores/themeStore';
 import { RatingBadge } from '../components/ui/RatingBadge';
 import { motion } from 'framer-motion';
-import { AlertTriangle, CheckCircle } from 'lucide-react';
+import { AlertTriangle, CheckCircle, Info } from 'lucide-react';
 
 export function AnalysisPage() {
   const { scheme, analysis } = useThemeStore();
@@ -37,16 +37,77 @@ export function AnalysisPage() {
         </div>
       </section>
 
-      {/* Burn-in risk */}
+      {/* Enhanced OLED Risk Assessment */}
       <section className="border border-layer rounded-xl p-5 bg-surface">
-        <h3 className="font-mono text-[10px] tracking-widest text-accent-dim uppercase mb-3">// OLED Burn-in Risk</h3>
-        <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full font-mono text-sm ${
-          analysis.burnInRisk === 'low'    ? 'bg-success-dim text-success border border-success' :
-          analysis.burnInRisk === 'medium' ? 'bg-warning-dim text-warning border border-warning' :
-                                             'bg-error-dim text-error border border-error'
-        }`}>
-          {analysis.burnInRisk === 'low' ? '●' : analysis.burnInRisk === 'medium' ? '◐' : '○'}
-          &nbsp;{analysis.burnInRisk.toUpperCase()} RISK
+        <h3 className="font-mono text-[10px] tracking-widest text-accent-dim uppercase mb-3">// Enhanced OLED Risk Assessment</h3>
+        <div className="space-y-4">
+          {/* Risk Overview */}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <span className="font-mono text-[9px] text-dim-brt uppercase">Overall Risk Level</span>
+              <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-lg font-mono text-sm ${
+                analysis.burnInRisk === 'low'    ? 'bg-success-dim/20 text-success border border-success/30' :
+                analysis.burnInRisk === 'medium' ? 'bg-warning-dim/20 text-warning border border-warning/30' :
+                                                   'bg-error-dim/20 text-error border border-error/30'
+              }`}>
+                <div className={`w-2 h-2 rounded-full ${
+                  analysis.burnInRisk === 'low'    ? 'bg-success' :
+                  analysis.burnInRisk === 'medium' ? 'bg-warning' :
+                                             'bg-error'
+                }`} />
+                {analysis.burnInRisk.toUpperCase()} RISK
+              </div>
+            </div>
+            <div className="space-y-2">
+              <span className="font-mono text-[9px] text-dim-brt uppercase">OLED Protection Score</span>
+              <div className="font-mono text-lg text-cyan">{analysis.oledScore}/100</div>
+            </div>
+          </div>
+
+          {/* Risk Meter */}
+          <div className="space-y-2">
+            <span className="font-mono text-[9px] text-dim-brt uppercase">Risk Distribution</span>
+            <div className="h-3 bg-gradient-to-r from-success via-warning to-error rounded-full relative overflow-hidden">
+              <div 
+                className="absolute top-0 left-0 h-full bg-gradient-to-r from-success via-warning to-error opacity-30"
+                style={{ width: `${Math.min(100, analysis.overallScore * 1.5)}%` }}
+              />
+              <div 
+                className="absolute top-0 left-0 h-full bg-gradient-to-r from-success via-warning to-error opacity-70"
+                style={{ width: `${analysis.overallScore}%` }}
+              />
+            </div>
+            <div className="flex justify-between font-mono text-[9px] text-dim">
+              <span>LOW</span>
+              <span>MEDIUM</span>
+              <span>HIGH</span>
+            </div>
+          </div>
+
+          {/* Risk Recommendations */}
+          <div className="space-y-2">
+            <span className="font-mono text-[9px] text-dim-brt uppercase">Recommendations</span>
+            <div className="space-y-2">
+              {analysis.burnInRisk === 'high' && (
+                <div className="flex gap-2 font-mono text-xs text-error">
+                  <AlertTriangle size={12} className="mt-0.5 shrink-0" />
+                  Switch to Ultra-Conservative mode for maximum OLED protection
+                </div>
+              )}
+              {analysis.burnInRisk === 'medium' && (
+                <div className="flex gap-2 font-mono text-xs text-warning">
+                  <Info size={12} className="mt-0.5 shrink-0" />
+                  Consider Conservative mode for better OLED protection
+                </div>
+              )}
+              {analysis.burnInRisk === 'low' && (
+                <div className="flex gap-2 font-mono text-xs text-success">
+                  <CheckCircle size={12} className="mt-0.5 shrink-0" />
+                  Good OLED protection - scheme is safe for extended use
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       </section>
 

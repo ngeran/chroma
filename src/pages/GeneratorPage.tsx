@@ -74,9 +74,10 @@ export function GeneratorPage() {
           {/* OLED Risk Level */}
           <div className="space-y-2">
             <label className="font-mono text-[10px] text-dim-brt uppercase tracking-widest">OLED Risk Level</label>
-            <div className="grid grid-cols-3 gap-1.5">
+            <div className="grid grid-cols-2 gap-1.5">
               {[
-                { value: 'conservative', label: 'Conservative', desc: 'Lowest burn-in risk' },
+                { value: 'ultra-conservative', label: 'Ultra Conservative', desc: 'Maximum OLED protection' },
+                { value: 'conservative', label: 'Conservative', desc: 'Low burn-in risk' },
                 { value: 'balanced', label: 'Balanced', desc: 'Default safety' },
                 { value: 'aggressive', label: 'Aggressive', desc: 'Higher brightness' },
               ].map(option => (

@@ -49,7 +49,7 @@ export type SchemeStyle =
   | 'tetradic'
   | 'spectral';
 
-export type OledRiskLevel = 'conservative' | 'balanced' | 'aggressive';
+export type OledRiskLevel = 'ultra-conservative' | 'conservative' | 'balanced' | 'aggressive';
 
 export interface AnalysisResult {
   overallScore: number;        // 0–100

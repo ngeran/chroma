@@ -90,6 +90,11 @@ interface OLEDOptimizationConfig {
 }
 
 const OLED_CONSTRAINTS = {
+  'ultra-conservative': {
+    maxLightness: { foreground: 0.25, accent: 0.20, brightAccent: 0.30, background: 0.0 },
+    minContrast: 5.0,
+    chromaBoost: 1.4, // boost chroma to compensate for very low lightness
+  },
   conservative: {
     maxLightness: { foreground: 0.35, accent: 0.32, brightAccent: 0.40, background: 0.0 },
     minContrast: 4.5,
