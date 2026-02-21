@@ -49,6 +49,8 @@ export type SchemeStyle =
   | 'tetradic'
   | 'spectral';
 
+export type OledRiskLevel = 'conservative' | 'balanced' | 'aggressive';
+
 export interface AnalysisResult {
   overallScore: number;        // 0–100
   oledScore: number;           // 0–100 (pixel savings)

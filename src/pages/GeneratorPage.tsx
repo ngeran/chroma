@@ -7,8 +7,8 @@ import { ANSI_ROLE_LABELS } from '../constants/defaults';
 
 export function GeneratorPage() {
   const {
-    scheme, baseHue, style, seed, schemeName, isGenerating,
-    setBaseHue, setStyle, setSeed, setSchemeName,
+    scheme, baseHue, style, seed, schemeName, oledRiskLevel, isGenerating,
+    setBaseHue, setStyle, setSeed, setSchemeName, setOledRiskLevel,
     generate, generateRandom, saveScheme,
   } = useThemeStore();
 
@@ -66,6 +66,31 @@ export function GeneratorPage() {
                 >
                   <div className="font-medium">{s.label}</div>
                   <div className="text-[9px] opacity-60 mt-0.5">{s.desc}</div>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* OLED Risk Level */}
+          <div className="space-y-2">
+            <label className="font-mono text-[10px] text-dim-brt uppercase tracking-widest">OLED Risk Level</label>
+            <div className="grid grid-cols-3 gap-1.5">
+              {[
+                { value: 'conservative', label: 'Conservative', desc: 'Lowest burn-in risk' },
+                { value: 'balanced', label: 'Balanced', desc: 'Default safety' },
+                { value: 'aggressive', label: 'Aggressive', desc: 'Higher brightness' },
+              ].map(option => (
+                <button
+                  key={option.value}
+                  onClick={() => setOledRiskLevel(option.value as any)}
+                  className={`text-left px-3 py-2 rounded border text-[10px] font-mono transition-colors ${
+                    oledRiskLevel === option.value
+                      ? 'border-cyan text-cyan bg-base'
+                      : 'border-layer text-dim-brt hover:border-accent-dim hover:text-fg'
+                  }`}
+                >
+                  <div className="font-medium">{option.label}</div>
+                  <div className="text-[9px] opacity-60 mt-0.5">{option.desc}</div>
                 </button>
               ))}
             </div>

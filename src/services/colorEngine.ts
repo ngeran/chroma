@@ -1,21 +1,21 @@
 /**
- * ChromaVoid Color Engine
- * Sophisticated OLED-aware color scheme generator.
+ * ChromaVoid Color Engine - Advanced Perceptual Edition
+ * Sophisticated OLED-aware color scheme generator using perceptual color spaces.
  *
  * ALGORITHM OVERVIEW:
- * 1. Accept base hue + style + seed
- * 2. Derive accent hue relationships using harmonic ratios
- * 3. Generate ANSI 16 using perceptual LCH color space
- * 4. Enforce OLED constraints: max luminance caps, pure black bg
- * 5. Apply WCAG contrast checks, auto-adjust if failing
- * 6. Return fully validated ColorScheme
+ * 1. Accept base hue + style + seed + OLED risk level
+ * 2. Generate colors using OKLAB/OKLCH for perceptual uniformity
+ * 3. Apply advanced harmony models with multi-dimensional relationships
+ * 4. Optimize for OLED with perceptual adaptation
+ * 5. Apply comprehensive accessibility and quality checks
+ * 6. Return validated, high-quality ColorScheme
  */
 
-import type { ColorScheme, SchemeStyle } from '../types/theme';
+import type { ColorScheme, SchemeStyle, OledRiskLevel } from '../types/theme';
+import { generatePerceptualColorPalette, assessColorQuality } from './advancedColorGenerator';
+import { oklchToHex } from './perceptualColor';
 
-// ── Utility: hex <-> HSL ──────────────────────────────────────────────────────
-
-
+// ── Legacy HSL support (for compatibility) ──────────────────────────────────────
 
 function hslToHex(h: number, s: number, l: number): string {
   h = ((h % 360) + 360) % 360;
@@ -29,37 +29,193 @@ function hslToHex(h: number, s: number, l: number): string {
   return `#${f(0)}${f(8)}${f(4)}`;
 }
 
-// ── OLED constraint: max allowed lightness per role ───────────────────────────
-const OLED_LIGHTNESS_CAPS = {
-  foreground:    47, // muted, saves pixels
-  accent:        45,
-  accent_bright: 55, // bright accent but capped
-  cursor:        55,
-  selection_bg:  12,
-  selection_fg:  52,
-  dark_ansi:     16, // colors 0-7
-  bright_ansi:   48, // colors 8-15
-  color7:        40,
-  color15:       50,
-};
+// ── Advanced Main Generator ─────────────────────────────────────────────────────
 
-// ── Derive harmonic hues from style ──────────────────────────────────────────
-function deriveHues(baseHue: number, style: SchemeStyle): number[] {
-  const h = ((baseHue % 360) + 360) % 360;
-  switch (style) {
-    case 'monochrome':          return [h, h, h, h, h, h];
-    case 'complementary':       return [h, (h + 180) % 360, h, (h + 180) % 360, h, (h + 180) % 360];
-    case 'triadic':             return [h, (h + 120) % 360, (h + 240) % 360, h, (h + 120) % 360, (h + 240) % 360];
-    case 'analogous':           return [h, (h + 30) % 360, (h - 30 + 360) % 360, (h + 15) % 360, (h - 15 + 360) % 360, h];
-    case 'split-complementary': return [h, (h + 150) % 360, (h + 210) % 360, h, (h + 150) % 360, (h + 210) % 360];
-    case 'tetradic':            return [h, (h + 90) % 360, (h + 180) % 360, (h + 270) % 360, h, (h + 90) % 360];
-    case 'spectral':            return [0, 60, 120, 180, 240, 300].map(offset => (h + offset) % 360);
-    default:                    return [h, h, h, h, h, h];
-  }
+export function generateColorScheme(
+  baseHue: number,
+  style: SchemeStyle,
+  seed: string,
+  name: string,
+  oledRiskLevel: OledRiskLevel = 'balanced',
+): ColorScheme {
+  // Generate perceptual color palette
+  const palette = generatePerceptualColorPalette({
+    baseHue,
+    style,
+    seed,
+    riskLevel: oledRiskLevel,
+    displayType: 'monitor',
+    powerSavingWeight: 0.7,
+    visualQualityWeight: 0.3,
+  });
+  
+  // Convert palette to hex colors
+  const hexColors = palette.map(color => oklchToHex(color.L, color.C, color.h));
+  
+  // Enhanced color assignment with role-based optimization
+  const colors = assignRolesToColors(hexColors, palette, style);
+  
+  // ── Derive a poetic name for the scheme
+  const schemeDescriptors = [
+    'Whispers of the void', 'Signal from deep space', 'Midnight resonance',
+    'Spectral silence', 'Zero-point luminescence', 'Event horizon shimmer',
+    'Quantum twilight', 'Photon decay', 'Dark matter pulse',
+  ];
+  // Use style in seed generation
+  const random = createSeededRandom(seed + name + style);
+  const description = schemeDescriptors[Math.floor(random() * schemeDescriptors.length)];
+  
+  return {
+    name,
+    description,
+    seed,
+    style,
+    hue: baseHue,
+    createdAt: new Date().toISOString(),
+    core: {
+      background:    colors.background,
+      foreground:    colors.foreground,
+      accent:       colors.accent,
+      accent_bright: colors.accent_bright,
+      cursor:       colors.accent_bright, // Use bright accent for cursor
+      selection_bg:  colors.selection_bg,
+      selection_fg:  colors.selection_fg,
+    },
+    terminal: {
+      color0:  colors.darkColors[0],  color1:  colors.darkColors[1],  
+      color2:  colors.darkColors[2],  color3:  colors.darkColors[3],
+      color4:  colors.darkColors[4],  color5:  colors.darkColors[5],  
+      color6:  colors.darkColors[6],  color7:  colors.darkColors[7],
+      color8:  colors.brightColors[0], color9:  colors.brightColors[1], 
+      color10: colors.brightColors[2], color11: colors.brightColors[3],
+      color12: colors.brightColors[4], color13: colors.brightColors[5], 
+      color14: colors.brightColors[6], color15: colors.brightColors[7],
+    },
+  };
 }
 
-// ── Seeded pseudo-random ──────────────────────────────────────────────────────
-function seededRandom(seed: string) {
+// ── Role-Based Color Assignment ─────────────────────────────────────────────────
+
+interface AssignedColors {
+  background: string;
+  foreground: string;
+  accent: string;
+  accent_bright: string;
+  selection_bg: string;
+  selection_fg: string;
+  darkColors: string[];
+  brightColors: string[];
+}
+
+function assignRolesToColors(
+  hexColors: string[], 
+  palette: { L: number; C: number; h: number }[],
+  _style: SchemeStyle
+): AssignedColors {
+  // Sort colors by perceptual lightness for role assignment
+  const sortedIndices = palette
+    .map((_, index) => index)
+    .sort((a, b) => palette[a].L - palette[b].L);
+  
+  // Assign roles based on perceptual properties
+  const background = '#000000'; // Always pure black for OLED
+  
+  // Foreground: most readable color (good contrast, not too bright)
+  const foreground = hexColors[sortedIndices[2]]; // Medium lightness
+  
+  // Accent: vibrant but not overwhelming
+  const accent = hexColors[sortedIndices[4]]; // Higher chroma, medium lightness
+  
+  // Bright accent: most vibrant color
+  const accent_bright = hexColors[sortedIndices[5]]; // Highest lightness/vibrancy
+  
+  // Selection colors: subtle but distinguishable
+  const selection_bg = hexColors[sortedIndices[1]]; // Low lightness, slightly visible
+  const selection_fg = hexColors[sortedIndices[3]]; // Good contrast on selection bg
+  
+  // ANSI colors: distribute the remaining colors
+  const remainingIndices = sortedIndices.filter(i => 
+    i !== sortedIndices[2] && i !== sortedIndices[4] && 
+    i !== sortedIndices[5] && i !== sortedIndices[1] && i !== sortedIndices[3]
+  );
+  
+  const darkColors = remainingIndices.slice(0, 8).map(i => hexColors[i]);
+  const brightColors = remainingIndices.slice(8, 16).map(i => hexColors[i]);
+  
+  // Fill any missing colors with perceptually appropriate ones
+  while (darkColors.length < 8) {
+    darkColors.push(generateFallbackColor(darkColors.length, 'dark', _style));
+  }
+  
+  while (brightColors.length < 8) {
+    brightColors.push(generateFallbackColor(brightColors.length, 'bright', _style));
+  }
+  
+  return {
+    background,
+    foreground,
+    accent,
+    accent_bright,
+    selection_bg,
+    selection_fg,
+    darkColors,
+    brightColors,
+  };
+}
+
+function generateFallbackColor(index: number, type: 'dark' | 'bright', _style: SchemeStyle): string {
+  const baseHue = (index * 45) % 360; // Distribute hues evenly
+  const lightness = type === 'dark' ? 15 + (index * 2) : 35 + (index * 3);
+  const saturation = 60 + (index * 5);
+  
+  return hslToHex(baseHue, Math.min(85, saturation), Math.min(type === 'dark' ? 40 : 70, lightness));
+}
+
+// ── Enhanced Random Scheme Generation ────────────────────────────────────────────
+
+export function generateRandomScheme(): ColorScheme {
+  const hue   = Math.floor(Math.random() * 360);
+  const styles: SchemeStyle[] = ['monochrome','complementary','triadic','analogous','split-complementary','tetradic','spectral'];
+  const style = styles[Math.floor(Math.random() * styles.length)];
+  const seed  = Math.random().toString(36).slice(2, 10);
+  const names = ['Nebula','Void','Eclipse','Cipher','Nova','Abyss','Phantom','Specter','Oblivion'];
+  const name  = names[Math.floor(Math.random() * names.length)] + '-' + seed.slice(0,4).toUpperCase();
+  const oledRiskLevel: OledRiskLevel = 'balanced'; // default for random schemes
+  return generateColorScheme(hue, style, seed, name, oledRiskLevel);
+}
+
+// ── Quality Assessment Integration ───────────────────────────────────────────────
+
+export function assessGeneratedScheme(scheme: ColorScheme): number {
+  // Convert scheme back to OKLCH for quality assessment
+  const oklchColors: { L: number; C: number; h: number }[] = [];
+  
+  // Extract key colors for assessment
+  const keyColors = [
+    scheme.core.foreground,
+    scheme.core.accent,
+    scheme.core.accent_bright,
+    ...Object.values(scheme.terminal).slice(0, 4), // Use first 4 terminal colors
+    ...Object.values(scheme.terminal).slice(8, 12), // Use bright colors 8-11
+  ];
+  
+  // Convert hex to OKLCH (simplified - in practice would need full conversion)
+  keyColors.forEach(() => {
+    // This is a placeholder - in a full implementation, you'd convert hex to OKLCH
+    oklchColors.push({
+      L: 0.5,  // Placeholder values
+      C: 0.1,
+      h: 180,
+    });
+  });
+  
+  const quality = assessColorQuality(oklchColors);
+  return quality.overallScore;
+}
+
+// ── Seeded Random Generation ─────────────────────────────────────────────────────
+
+function createSeededRandom(seed: string) {
   let hash = 0;
   for (let i = 0; i < seed.length; i++) {
     hash = ((hash << 5) - hash) + seed.charCodeAt(i);
@@ -69,89 +225,4 @@ function seededRandom(seed: string) {
     hash = Math.imul(48271, hash) | 0;
     return (hash >>> 0) / 4294967296;
   };
-}
-
-// ── Main generator ─────────────────────────────────────────────────────────────
-export function generateColorScheme(
-  baseHue: number,
-  style: SchemeStyle,
-  seed: string,
-  name: string,
-): ColorScheme {
-  const rand = seededRandom(seed + name);
-  const hues = deriveHues(baseHue, style);
-
-  // Helper: generate with slight randomization within bounds
-  const gen = (hue: number, sat: number, maxL: number, jitter = 4): string => {
-    const h = ((hue + (rand() * jitter * 2 - jitter)) % 360 + 360) % 360;
-    const s = Math.max(10, Math.min(85, sat + rand() * 8 - 4));
-    const l = Math.max(3, Math.min(maxL, maxL - rand() * 4));
-    return hslToHex(h, s, l);
-  };
-
-  // ── Core UI
-  const fg         = gen(hues[0], 28, OLED_LIGHTNESS_CAPS.foreground);
-  const accent      = gen(hues[0], 32, OLED_LIGHTNESS_CAPS.accent);
-  const accentBrt   = gen(hues[0], 90, OLED_LIGHTNESS_CAPS.accent_bright);
-  const cursor      = accentBrt;
-  const selBg       = gen(hues[0], 40, OLED_LIGHTNESS_CAPS.selection_bg);
-  const selFg       = gen(hues[0], 22, OLED_LIGHTNESS_CAPS.selection_fg);
-
-  // ── ANSI dark spectrum (colors 0–7): use harmonic hues, very low lightness
-  const ansiDarkHues  = [hues[0], hues[1] ?? hues[0], hues[2] ?? hues[0], hues[3] ?? hues[0],
-                         hues[4] ?? hues[0], hues[5] ?? hues[0], hues[0], hues[0]];
-  const ansiDarkSats  = [15, 30, 30, 30, 30, 30, 30, 18];
-  const ansiDarkLMax  = [11, 14, 14, 14, 14, 14, 14, OLED_LIGHTNESS_CAPS.color7];
-
-  // ── ANSI bright spectrum (colors 8–15): same hues, higher lightness
-  const ansiBrtSats  = [22, 40, 40, 42, 38, 40, 40, 26];
-  const ansiBrtLMax  = [20, OLED_LIGHTNESS_CAPS.bright_ansi, OLED_LIGHTNESS_CAPS.bright_ansi,
-                        OLED_LIGHTNESS_CAPS.bright_ansi, OLED_LIGHTNESS_CAPS.bright_ansi,
-                        OLED_LIGHTNESS_CAPS.bright_ansi, OLED_LIGHTNESS_CAPS.bright_ansi,
-                        OLED_LIGHTNESS_CAPS.color15];
-
-  const dark  = ansiDarkHues.map((h, i) => gen(h, ansiDarkSats[i], ansiDarkLMax[i]));
-  const brite = ansiDarkHues.map((h, i) => gen(h, ansiBrtSats[i], ansiBrtLMax[i]));
-
-  // ── Derive a poetic name for the scheme
-  const schemeDescriptors = [
-    'Whispers of the void', 'Signal from deep space', 'Midnight resonance',
-    'Spectral silence', 'Zero-point luminescence', 'Event horizon shimmer',
-    'Quantum twilight', 'Photon decay', 'Dark matter pulse',
-  ];
-  const description = schemeDescriptors[Math.floor(rand() * schemeDescriptors.length)];
-
-  return {
-    name,
-    description,
-    seed,
-    style,
-    hue: baseHue,
-    createdAt: new Date().toISOString(),
-    core: {
-      background:    '#000000',
-      foreground:    fg,
-      accent,
-      accent_bright: accentBrt,
-      cursor,
-      selection_bg:  selBg,
-      selection_fg:  selFg,
-    },
-    terminal: {
-      color0:  dark[0],  color1:  dark[1],  color2: dark[2],   color3: dark[3],
-      color4:  dark[4],  color5:  dark[5],  color6: dark[6],   color7: dark[7],
-      color8:  brite[0], color9:  brite[1], color10: brite[2], color11: brite[3],
-      color12: brite[4], color13: brite[5], color14: brite[6], color15: brite[7],
-    },
-  };
-}
-
-export function generateRandomScheme(): ColorScheme {
-  const hue   = Math.floor(Math.random() * 360);
-  const styles: SchemeStyle[] = ['monochrome','complementary','triadic','analogous','split-complementary','tetradic','spectral'];
-  const style = styles[Math.floor(Math.random() * styles.length)];
-  const seed  = Math.random().toString(36).slice(2, 10);
-  const names = ['Nebula','Void','Eclipse','Cipher','Nova','Abyss','Phantom','Specter','Oblivion'];
-  const name  = names[Math.floor(Math.random() * names.length)] + '-' + seed.slice(0,4).toUpperCase();
-  return generateColorScheme(hue, style, seed, name);
 }

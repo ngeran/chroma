@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import type { ColorScheme, AnalysisResult, SchemeStyle } from '../types/theme';
+import type { ColorScheme, AnalysisResult, SchemeStyle, OledRiskLevel } from '../types/theme';
 import { DEFAULT_SCHEME } from '../constants/defaults';
 import { generateColorScheme, generateRandomScheme } from '../services/colorEngine';
 import { analyzeColorScheme } from '../services/colorAnalyzer';
@@ -19,12 +19,14 @@ interface ThemeStore {
   style: SchemeStyle;
   seed: string;
   schemeName: string;
+  oledRiskLevel: OledRiskLevel;
 
   // Actions
   setBaseHue: (hue: number) => void;
   setStyle: (style: SchemeStyle) => void;
   setSeed: (seed: string) => void;
   setSchemeName: (name: string) => void;
+  setOledRiskLevel: (level: OledRiskLevel) => void;
   generate: () => void;
   generateRandom: () => void;
   toggleDarkMode: () => void;
@@ -48,17 +50,19 @@ export const useThemeStore = create<ThemeStore>()(
       style: 'monochrome',
       seed: 'singularity',
       schemeName: 'Singularity',
+      oledRiskLevel: 'balanced',
 
       setBaseHue: (hue) => set({ baseHue: hue }),
       setStyle:   (style) => set({ style }),
       setSeed:    (seed) => set({ seed }),
       setSchemeName: (schemeName) => set({ schemeName }),
+      setOledRiskLevel: (oledRiskLevel) => set({ oledRiskLevel }),
 
       generate: () => {
-        const { baseHue, style, seed, schemeName } = get();
+        const { baseHue, style, seed, schemeName, oledRiskLevel } = get();
         set({ isGenerating: true });
         setTimeout(() => {
-          const scheme = generateColorScheme(baseHue, style, seed, schemeName || 'MyTheme');
+          const scheme = generateColorScheme(baseHue, style, seed, schemeName || 'MyTheme', oledRiskLevel);
           const analysis = analyzeColorScheme(scheme);
           set({ scheme, analysis, isGenerating: false });
         }, 400); // artificial delay for UX
@@ -73,6 +77,7 @@ export const useThemeStore = create<ThemeStore>()(
             scheme, analysis, isGenerating: false,
             baseHue: scheme.hue, style: scheme.style,
             seed: scheme.seed, schemeName: scheme.name,
+            oledRiskLevel: 'balanced', // reset to balanced for random
           });
         }, 400);
       },

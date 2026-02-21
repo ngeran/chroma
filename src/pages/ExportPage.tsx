@@ -1,7 +1,7 @@
 import { useThemeStore } from '../stores/themeStore';
-import { ExportFormat, exporters, generateExportFile, downloadExportFile } from '../services/themeExporters';
+import { ExportFormat, exporters, generateExportFile, downloadExportFile, downloadZipExport } from '../services/themeExporters';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Download, Copy, Check, ChevronDown } from 'lucide-react';
+import { Download, Copy, Check, ChevronDown, Archive } from 'lucide-react';
 import { useState } from 'react';
 
 export function ExportPage() {
@@ -9,6 +9,7 @@ export function ExportPage() {
   const [copied, setCopied] = useState(false);
   const [format, setFormat] = useState<ExportFormat>('toml');
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [isExportingZip, setIsExportingZip] = useState(false);
   
   const currentExporter = exporters.find(e => e.id === format)!;
   const content = generateExportFile(scheme, format);
@@ -17,6 +18,17 @@ export function ExportPage() {
     navigator.clipboard.writeText(content);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleZipExport = async () => {
+    setIsExportingZip(true);
+    try {
+      await downloadZipExport(scheme);
+    } catch (error) {
+      console.error('Failed to export zip:', error);
+    } finally {
+      setIsExportingZip(false);
+    }
   };
 
   return (
@@ -73,6 +85,15 @@ export function ExportPage() {
             >
               <Download size={12} />
               Export {currentExporter.ext}
+            </button>
+            <button
+              onClick={handleZipExport}
+              disabled={isExportingZip}
+              className="flex-1 sm:flex-none flex items-center justify-center gap-2 border border-layer text-fg font-mono text-xs px-3 py-1.5 rounded hover:border-cyan hover:text-cyan transition-colors disabled:opacity-40"
+              title="Export all files as ZIP"
+            >
+              <Archive size={12} />
+              {isExportingZip ? 'Zipping…' : 'ZIP'}
             </button>
           </div>
         </div>
