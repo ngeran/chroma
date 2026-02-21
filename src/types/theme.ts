@@ -76,3 +76,26 @@ export interface AnalysisResult {
 export interface AppTheme {
   mode: 'dark' | 'light';
 }
+
+export interface ColorPalette {
+  name: string;
+  description: string;
+  baseHue: number;
+  colors: {
+    primary: string;
+    secondary: string;
+    accent: string;
+    surface: string;
+    background: string;
+    foreground: string;
+    dim: string;
+    error: string;
+    warning: string;
+    success: string;
+    info: string;
+    layer: string;
+  };
+  harmony: SchemeStyle;
+  contrast: 'low' | 'medium' | 'high';
+  mood: 'calm' | 'modern' | 'retro' | 'soft' | 'professional' | 'vibrant';
+}

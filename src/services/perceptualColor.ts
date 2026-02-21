@@ -233,6 +233,30 @@ export function oklchToHex(L: number, C: number, h: number): string {
   return `#${rgb.r.toString(16).padStart(2, '0')}${rgb.g.toString(16).padStart(2, '0')}${rgb.b.toString(16).padStart(2, '0')}`;
 }
 
+/**
+ * Convert hex string to OKLAB
+ */
+export function hexToOKLAB(hex: string): OKLAB {
+  // Remove # if present
+  hex = hex.replace(/^#/, '');
+  
+  // Parse hex to RGB
+  const r = parseInt(hex.substring(0, 2), 16);
+  const g = parseInt(hex.substring(2, 4), 16);
+  const b = parseInt(hex.substring(4, 6), 16);
+  
+  // Convert RGB to OKLAB
+  return rgbToOKLAB(r, g, b);
+}
+
+/**
+ * Convert OKLAB to hex string
+ */
+export function oklabToHex(L: number, a: number, b: number): string {
+  const rgb = oklabToRGB(L, a, b);
+  return `#${rgb.r.toString(16).padStart(2, '0')}${rgb.g.toString(16).padStart(2, '0')}${rgb.b.toString(16).padStart(2, '0')}`;
+}
+
 // ── Perceptual color distance ───────────────────────────────────────────────────
 
 /**

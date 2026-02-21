@@ -1,6 +1,8 @@
+import { useState } from 'react';
 import { useThemeStore } from '../stores/themeStore';
 import { SCHEME_STYLES } from '../constants/defaults';
 import { ColorSwatch } from '../components/ui/ColorSwatch';
+import { PaletteSelector } from '../components/ui/PaletteSelector';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Shuffle, Zap } from 'lucide-react';
 import { ANSI_ROLE_LABELS } from '../constants/defaults';
@@ -9,15 +11,48 @@ export function GeneratorPage() {
   const {
     scheme, baseHue, style, seed, schemeName, oledRiskLevel, isGenerating,
     setBaseHue, setStyle, setSeed, setSchemeName, setOledRiskLevel,
-    generate, generateRandom, saveScheme,
+    generate, generateRandom, saveScheme, loadScheme,
   } = useThemeStore();
+  
+  const [generationMode, setGenerationMode] = useState<'scratch' | 'palette'>('scratch');
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-[380px_1fr] gap-6">
       {/* ── Controls Panel ─────────────────────────────────────── */}
       <aside className="space-y-6">
-        <div className="border border-layer rounded-xl p-5 bg-surface space-y-5">
-          <h2 className="font-mono text-xs tracking-[0.2em] text-cyan uppercase">// Parameters</h2>
+        {/* Generation Mode Toggle */}
+        <div className="border border-layer rounded-xl p-5 bg-surface">
+          <h2 className="font-mono text-xs tracking-[0.2em] text-cyan uppercase mb-4">// Generation Mode</h2>
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              onClick={() => setGenerationMode('scratch')}
+              className={`px-4 py-3 rounded-lg border text-center transition-colors ${
+                generationMode === 'scratch'
+                  ? 'border-cyan bg-cyan/10 text-cyan'
+                  : 'border-layer text-fg hover:border-dim hover:bg-layer/10'
+              }`}
+            >
+              <div className="font-mono text-sm">From Scratch</div>
+              <div className="text-xs text-dim">Generate with algorithms</div>
+            </button>
+            <button
+              onClick={() => setGenerationMode('palette')}
+              className={`px-4 py-3 rounded-lg border text-center transition-colors ${
+                generationMode === 'palette'
+                  ? 'border-cyan bg-cyan/10 text-cyan'
+                  : 'border-layer text-fg hover:border-dim hover:bg-layer/10'
+              }`}
+            >
+              <div className="font-mono text-sm">From Palette</div>
+              <div className="text-xs text-dim">Optimize existing themes</div>
+            </button>
+          </div>
+        </div>
+
+        {/* Dynamic Controls Based on Mode */}
+        {generationMode === 'scratch' && (
+          <div className="border border-layer rounded-xl p-5 bg-surface space-y-5">
+            <h2 className="font-mono text-xs tracking-[0.2em] text-cyan uppercase">// Parameters</h2>
 
           {/* Name */}
           <div className="space-y-2">
@@ -135,6 +170,17 @@ export function GeneratorPage() {
             Save to Library
           </button>
         </div>
+        )}
+
+        {generationMode === 'palette' && (
+          <div className="border border-layer rounded-xl p-5 bg-surface">
+            <PaletteSelector 
+              onPaletteOptimized={(optimizedScheme) => {
+                loadScheme(optimizedScheme);
+              }}
+            />
+          </div>
+        )}
       </aside>
 
       {/* ── Preview Panel ───────────────────────────────────────── */}
