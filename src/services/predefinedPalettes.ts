@@ -171,7 +171,8 @@ export const PALETTE_METADATA = [
   },
   {
     id: 'gruvbox',
-    category: 'retro',
+    name: 'Gruvbox',
+    category: 'dark',
     description: 'Retro groove color scheme with warm tones',
     author: 'Pavel Pertsev',
     year: 2012
@@ -179,7 +180,7 @@ export const PALETTE_METADATA = [
   {
     id: 'catppuccin',
     name: 'Catppuccin',
-    category: 'modern',
+    category: 'dark',
     description: 'Soothing pastel theme with soft colors',
     author: 'Catppuccin Org',
     year: 2021
@@ -187,7 +188,7 @@ export const PALETTE_METADATA = [
   {
     id: 'monokai',
     name: 'Monokai',
-    category: 'modern',
+    category: 'dark',
     description: 'Professional color scheme for developers',
     author: 'Wimer Hazenberg',
     year: 2011
@@ -195,7 +196,7 @@ export const PALETTE_METADATA = [
   {
     id: 'dracula',
     name: 'Dracula',
-    category: 'vibrant',
+    category: 'dark',
     description: 'Dark theme supporting many editors and terminals',
     author: 'Zeno Rocha',
     year: 2013

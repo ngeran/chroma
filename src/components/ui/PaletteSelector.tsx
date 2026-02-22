@@ -1,40 +1,104 @@
 import { useState } from 'react';
-import { PALETTE_METADATA, PALETTE_CATEGORIES, getPalettesByCategory, PREDEFINED_PALETTES } from '@/services/predefinedPalettes';
-import { PaletteOptimizer } from '@/services/paletteOptimizer';
-import { useThemeStore } from '@/stores/themeStore';
+import { motion } from 'framer-motion';
+import { Zap, Palette } from 'lucide-react';
+import { PREDEFINED_PALETTES, PALETTE_METADATA } from '../../services/predefinedPalettes';
+import { PaletteOptimizer } from '../../services/paletteOptimizer';
+import { useThemeStore } from '../../stores/themeStore';
+import type { ColorScheme, ColorPalette } from '../../types/theme';
 
 interface PaletteSelectorProps {
-  onPaletteSelect?: (paletteId: string) => void;
-  onPaletteOptimized?: (colorScheme: any) => void;
+  onPaletteOptimized?: (colorScheme: ColorScheme) => void;
 }
 
-export function PaletteSelector({ onPaletteSelect, onPaletteOptimized }: PaletteSelectorProps) {
-  const [selectedCategory, setSelectedCategory] = useState<string>('dark');
-  const [selectedPalette, setSelectedPalette] = useState<string>('');
+function PaletteCard({
+  palette,
+  metadata,
+  isSelected,
+  onSelect,
+}: {
+  palette: ColorPalette;
+  metadata: { name: string; description: string; author: string; year: number };
+  isSelected: boolean;
+  onSelect: () => void;
+}) {
+  const colors = [
+    { key: 'bg', color: palette.colors.background },
+    { key: 'surface', color: palette.colors.surface },
+    { key: 'fg', color: palette.colors.foreground },
+    { key: 'accent', color: palette.colors.accent },
+    { key: 'primary', color: palette.colors.primary },
+    { key: 'error', color: palette.colors.error },
+    { key: 'warning', color: palette.colors.warning },
+    { key: 'success', color: palette.colors.success },
+  ];
+
+  return (
+    <motion.button
+      onClick={onSelect}
+      className={`w-full text-left p-4 rounded-lg border transition-all ${
+        isSelected
+          ? 'border-cyan bg-cyan/10 ring-1 ring-cyan'
+          : 'border-layer hover:border-dim hover:bg-layer/10'
+      }`}
+      whileHover={{ scale: isSelected ? 1 : 1.02 }}
+      whileTap={{ scale: 0.98 }}
+    >
+      <div className="flex items-start justify-between mb-3">
+        <div>
+          <h3 className="font-display text-sm text-fg tracking-wide">{metadata.name}</h3>
+          <p className="text-[10px] text-dim mt-0.5">{metadata.author} · {metadata.year}</p>
+        </div>
+        <div className="w-6 h-6 rounded-full border border-layer overflow-hidden flex">
+          <div className="w-1/2 h-full" style={{ backgroundColor: palette.colors.primary }} />
+          <div className="w-1/2 h-full" style={{ backgroundColor: palette.colors.accent }} />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-8 gap-0.5 mb-3">
+        {colors.map(({ key, color }) => (
+          <div
+            key={key}
+            className="h-5 first:rounded-l last:rounded-r"
+            style={{ backgroundColor: color }}
+          />
+        ))}
+      </div>
+
+      <p className="text-[10px] text-dim-brt leading-relaxed">{metadata.description}</p>
+
+      {isSelected && (
+        <motion.div
+          initial={{ opacity: 0, height: 0 }}
+          animate={{ opacity: 1, height: 'auto' }}
+          className="mt-3 pt-3 border-t border-cyan/30"
+        >
+          <div className="flex items-center gap-2 text-[10px] text-cyan">
+            <Palette size={12} />
+            <span>Selected for OLED optimization</span>
+          </div>
+        </motion.div>
+      )}
+    </motion.button>
+  );
+}
+
+export function PaletteSelector({ onPaletteOptimized }: PaletteSelectorProps) {
+  const [selectedId, setSelectedId] = useState<string | null>(null);
   const [isOptimizing, setIsOptimizing] = useState(false);
-  const { oledRiskLevel } = useThemeStore();
+  const { oledRiskLevel, setOledRiskLevel } = useThemeStore();
 
-  const categories = Object.keys(PALETTE_CATEGORIES);
-  const palettes = getPalettesByCategory(selectedCategory);
+  const handleOptimize = async () => {
+    if (!selectedId) return;
 
-  const handlePaletteSelect = (paletteId: string) => {
-    setSelectedPalette(paletteId);
-    onPaletteSelect?.(paletteId);
-  };
-
-  const handleOptimizePalette = async () => {
-    if (!selectedPalette) return;
-    
     setIsOptimizing(true);
     try {
-      const optimizedScheme = await PaletteOptimizer.optimizePalette(selectedPalette, {
+      const scheme = await PaletteOptimizer.optimizePalette(selectedId, {
         oledRiskLevel,
         preserveSaturation: 0.7,
         preserveBrightness: 0.6,
-        contrastBoost: 0.3
+        contrastBoost: 0.3,
       });
-      
-      onPaletteOptimized?.(optimizedScheme);
+      onPaletteOptimized?.(scheme);
     } catch (error) {
       console.error('Failed to optimize palette:', error);
     } finally {
@@ -42,122 +106,107 @@ export function PaletteSelector({ onPaletteSelect, onPaletteOptimized }: Palette
     }
   };
 
-  const getPalettePreview = (paletteId: string) => {
-    const metadata = PALETTE_METADATA.find(m => m.id === paletteId);
-    if (!metadata) return null;
-
-    return (
-      <div
-        key={paletteId}
-        className={`p-4 rounded-lg border cursor-pointer transition-all ${
-          selectedPalette === paletteId
-            ? 'border-cyan bg-cyan/10'
-            : 'border-layer hover:border-dim hover:bg-layer/10'
-        }`}
-        onClick={() => handlePaletteSelect(paletteId)}
-      >
-        <div className="flex items-center justify-between mb-2">
-          <h3 className="font-semibold text-fg">{metadata.name}</h3>
-          <span className="text-xs px-2 py-1 rounded bg-layer text-dim">
-            {metadata.category}
-          </span>
-        </div>
-        
-        <p className="text-sm text-dim mb-3">{metadata.description}</p>
-        
-        {/* Color preview */}
-        <div className="grid grid-cols-6 gap-1">
-          {['primary', 'secondary', 'accent', 'error', 'warning', 'success'].map(colorType => (
-            <div
-              key={colorType}
-              className="w-6 h-6 rounded"
-              style={{
-                backgroundColor: getPaletteColor(paletteId, colorType)
-              }}
-              title={colorType}
-            />
-          ))}
-        </div>
-        
-        <div className="text-xs text-dim mt-2">
-          by {metadata.author} • {metadata.year}
-        </div>
-      </div>
-    );
-  };
-
-  const getPaletteColor = (paletteId: string, colorType: string): string => {
-    try {
-      const palette = PREDEFINED_PALETTES[paletteId as keyof typeof PREDEFINED_PALETTES];
-      return palette?.colors[colorType as keyof typeof palette.colors] || '#666666';
-    } catch {
-      return '#666666';
-    }
-  };
+  const selectedPalette = selectedId ? PREDEFINED_PALETTES[selectedId] : null;
+  const selectedMetadata = selectedId
+    ? PALETTE_METADATA.find((m) => m.id === selectedId)
+    : null;
 
   return (
-    <div className="space-y-6">
-      {/* Category selector */}
+    <div className="space-y-5">
       <div>
-        <h2 className="text-xl font-bold text-fg mb-4">Choose a Palette</h2>
-        <div className="flex flex-wrap gap-2">
-          {categories.map(category => (
-            <button
-              key={category}
-              className={`px-3 py-1 rounded-full text-sm transition-colors ${
-                selectedCategory === category
-                  ? 'bg-cyan text-void'
-                  : 'bg-layer text-fg hover:bg-dim'
-              }`}
-              onClick={() => setSelectedCategory(category)}
-            >
-              {category.charAt(0).toUpperCase() + category.slice(1)}
-            </button>
-          ))}
-        </div>
+        <h2 className="font-display text-lg text-cyan tracking-wide mb-1">Choose a Base Palette</h2>
+        <p className="font-mono text-[10px] text-dim-brt uppercase tracking-widest">
+          Popular themes optimized for OLED displays
+        </p>
       </div>
 
-      {/* Palette grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {palettes.map(palette => palette.name).map(paletteId => 
-          getPalettePreview(paletteId)
-        )}
+      <div className="grid grid-cols-2 gap-3">
+        {PALETTE_METADATA.map((meta) => {
+          const palette = PREDEFINED_PALETTES[meta.id];
+          if (!palette) return null;
+
+          return (
+            <PaletteCard
+              key={meta.id}
+              palette={palette}
+              metadata={meta}
+              isSelected={selectedId === meta.id}
+              onSelect={() => setSelectedId(meta.id)}
+            />
+          );
+        })}
       </div>
 
-      {/* Action buttons */}
-      {selectedPalette && (
-        <div className="flex gap-3 pt-4 border-t border-layer">
+      {selectedPalette && selectedMetadata && (
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="space-y-4 pt-4 border-t border-layer"
+        >
+          <div className="p-4 rounded-lg border border-layer bg-surface">
+            <h4 className="font-mono text-[10px] text-dim-brt uppercase tracking-widest mb-3">
+              Color Roles — {selectedMetadata.name}
+            </h4>
+            <div className="grid grid-cols-2 gap-2">
+              {Object.entries(selectedPalette.colors).map(([key, hex]) => (
+                <div key={key} className="flex items-center gap-2">
+                  <div
+                    className="w-5 h-5 rounded border border-layer flex-shrink-0"
+                    style={{ backgroundColor: hex }}
+                  />
+                  <span className="text-[10px] text-fg truncate">{key}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <label className="font-mono text-[10px] text-dim-brt uppercase tracking-widest block mb-2">
+              OLED Risk Level
+            </label>
+            <div className="grid grid-cols-2 gap-1.5">
+              {[
+                { value: 'ultra-conservative', label: 'Ultra Safe', desc: 'Max protection' },
+                { value: 'conservative', label: 'Conservative', desc: 'Low burn-in risk' },
+                { value: 'balanced', label: 'Balanced', desc: 'Default' },
+                { value: 'aggressive', label: 'Aggressive', desc: 'Higher brightness' },
+              ].map((opt) => (
+                <button
+                  key={opt.value}
+                  onClick={() => setOledRiskLevel(opt.value as typeof oledRiskLevel)}
+                  className={`text-left px-3 py-2 rounded border text-[10px] font-mono transition-colors ${
+                    oledRiskLevel === opt.value
+                      ? 'border-cyan text-cyan bg-base'
+                      : 'border-layer text-dim-brt hover:border-dim'
+                  }`}
+                >
+                  <div className="font-medium">{opt.label}</div>
+                  <div className="text-[9px] opacity-60">{opt.desc}</div>
+                </button>
+              ))}
+            </div>
+          </div>
+
           <button
-            className="px-4 py-2 bg-cyan text-void rounded-lg font-medium hover:bg-cyan/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            onClick={handleOptimizePalette}
+            onClick={handleOptimize}
             disabled={isOptimizing}
+            className="w-full flex items-center justify-center gap-2 bg-base border border-cyan text-cyan font-mono text-xs tracking-widest uppercase px-4 py-3 rounded hover:bg-cyan/10 transition-colors disabled:opacity-40"
           >
-            {isOptimizing ? 'Optimizing...' : 'Optimize for OLED'}
+            <Zap size={14} />
+            {isOptimizing ? 'Optimizing...' : `Optimize ${selectedMetadata.name} for OLED`}
           </button>
-          
-          <button
-            className="px-4 py-2 border border-layer text-fg rounded-lg font-medium hover:bg-layer/10 transition-colors"
-            onClick={() => setSelectedPalette('')}
-          >
-            Clear Selection
-          </button>
-        </div>
+        </motion.div>
       )}
 
-      {/* Info panel */}
-      <div className="p-4 rounded-lg bg-layer/20 border border-layer">
-        <h3 className="font-semibold text-fg mb-2">About Palette Optimization</h3>
-        <p className="text-sm text-dim">
-          This system takes beautiful, proven color palettes and optimizes them for OLED displays 
-          while preserving their aesthetic appeal. The optimization process ensures:
+      <div className="p-4 rounded-lg border border-layer bg-surface/50">
+        <h3 className="font-mono text-[10px] text-dim-brt uppercase tracking-widest mb-2">
+          About Palette Optimization
+        </h3>
+        <p className="text-[10px] text-dim leading-relaxed">
+          Takes beautiful, proven color palettes and adapts them for OLED displays.
+          The optimization ensures pure black backgrounds, protected accent colors,
+          enhanced contrast, and reduced burn-in risk while preserving the original aesthetic.
         </p>
-        <ul className="text-sm text-dim mt-2 space-y-1">
-          <li>• Pure black background for OLED efficiency</li>
-          <li>• Protected accent colors for visual identity</li>
-          <li>• Enhanced contrast for readability</li>
-          <li>• Burn-in risk reduction</li>
-          <li>• Preserved color harmony</li>
-        </ul>
       </div>
     </div>
   );

@@ -4,17 +4,31 @@ import { SCHEME_STYLES } from '../constants/defaults';
 import { ColorSwatch } from '../components/ui/ColorSwatch';
 import { PaletteSelector } from '../components/ui/PaletteSelector';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Shuffle, Zap } from 'lucide-react';
+import { Shuffle, Zap, Bookmark, BookmarkCheck } from 'lucide-react';
 import { ANSI_ROLE_LABELS } from '../constants/defaults';
 
 export function GeneratorPage() {
   const {
     scheme, baseHue, style, seed, schemeName, oledRiskLevel, isGenerating,
+    savedSchemes,
     setBaseHue, setStyle, setSeed, setSchemeName, setOledRiskLevel,
     generate, generateRandom, saveScheme, loadScheme,
   } = useThemeStore();
   
   const [generationMode, setGenerationMode] = useState<'scratch' | 'palette'>('scratch');
+  const [paletteOptimized, setPaletteOptimized] = useState(false);
+
+  const isSchemeSaved = savedSchemes.some(s => s.name === scheme.name);
+
+  const handleSaveScheme = () => {
+    saveScheme();
+    setPaletteOptimized(false);
+  };
+
+  const handlePaletteOptimized = (optimizedScheme: typeof scheme) => {
+    loadScheme(optimizedScheme);
+    setPaletteOptimized(true);
+  };
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-[380px_1fr] gap-6">
@@ -165,20 +179,66 @@ export function GeneratorPage() {
 
           <button
             onClick={saveScheme}
-            className="w-full border border-layer text-dim-brt font-mono text-xs tracking-widest uppercase px-4 py-2 rounded hover:border-accent-dim hover:text-fg transition-colors"
+            disabled={isSchemeSaved}
+            className={`w-full flex items-center justify-center gap-2 font-mono text-xs tracking-widest uppercase px-4 py-2 rounded transition-colors ${
+              isSchemeSaved
+                ? 'border border-success text-success bg-success/10 cursor-default'
+                : 'border border-layer text-dim-brt hover:border-accent-dim hover:text-fg'
+            }`}
           >
-            Save to Library
+            {isSchemeSaved ? (
+              <>
+                <BookmarkCheck size={12} />
+                Saved to Library
+              </>
+            ) : (
+              <>
+                <Bookmark size={12} />
+                Save to Library
+              </>
+            )}
           </button>
         </div>
         )}
 
         {generationMode === 'palette' && (
-          <div className="border border-layer rounded-xl p-5 bg-surface">
+          <div className="border border-layer rounded-xl p-5 bg-surface space-y-4">
             <PaletteSelector 
-              onPaletteOptimized={(optimizedScheme) => {
-                loadScheme(optimizedScheme);
-              }}
+              onPaletteOptimized={handlePaletteOptimized}
             />
+            
+            {paletteOptimized && (
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="pt-4 border-t border-layer"
+              >
+                <button
+                  onClick={handleSaveScheme}
+                  disabled={isSchemeSaved}
+                  className={`w-full flex items-center justify-center gap-2 font-mono text-xs tracking-widest uppercase px-4 py-3 rounded transition-colors ${
+                    isSchemeSaved
+                      ? 'border border-success text-success bg-success/10 cursor-default'
+                      : 'border border-cyan text-cyan hover:bg-cyan/10'
+                  }`}
+                >
+                  {isSchemeSaved ? (
+                    <>
+                      <BookmarkCheck size={14} />
+                      Saved to Library
+                    </>
+                  ) : (
+                    <>
+                      <Bookmark size={14} />
+                      Save to Library
+                    </>
+                  )}
+                </button>
+                <p className="text-[10px] text-dim text-center mt-2">
+                  Save this OLED-optimized scheme to your library for export
+                </p>
+              </motion.div>
+            )}
           </div>
         )}
       </aside>
