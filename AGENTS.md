@@ -2,149 +2,148 @@
 
 ## Build & Development Commands
 
-### Core Commands
 ```bash
-# Development server with hot reload
-npm run dev
-
-# Build for production (includes TypeScript check)
-npm run build
-
-# Preview production build
-npm run preview
-```
-
-### Linting & Type Checking
-```bash
-# TypeScript type checking (integrated into build)
-npx tsc --noEmit
-
-# No linting configured yet - add ESLint/Prettier if needed
-```
-
-### Testing
-```bash
-# No tests configured yet - add test framework when needed
-# Consider adding Vitest for unit/integration tests
+npm run dev          # Development server with hot reload (localhost:5173)
+npm run build        # Production build (includes TypeScript check)
+npm run preview      # Preview production build locally
+npx tsc --noEmit     # TypeScript type check without emitting files
+# No tests configured yet - consider: npx vitest run src/path/to/test.test.ts
 ```
 
 ## Project Overview
-This is a React + TypeScript application for generating and analyzing color schemes, particularly focused on OLED-optimized themes. The project uses Vite for building, Tailwind CSS for styling, and Zustand for state management.
+
+React + TypeScript application for generating OLED-optimized terminal color schemes. Uses Vite, Tailwind CSS, Zustand state management, and Framer Motion. Core features: perceptual color generation (OKLAB/OKLCH), accessibility analysis, theme export.
 
 ## Code Style Guidelines
 
-### TypeScript & Imports
-- **Strict TypeScript**: Project uses strict mode with noUnusedLocals, noUnusedParameters
-- **Import organization**: Group imports in this order:
-  1. React and third-party libraries
-  2. Relative imports (../, ./)
-  3. Type imports (if separate)
-- **Type imports**: Use `type` keyword for type-only imports when possible
-- **Path aliases**: Use `@/` alias for src directory imports (configured in tsconfig.json)
+### TypeScript Configuration
+- Strict mode with `noUnusedLocals`, `noUnusedParameters`, `noFallthroughCasesInSwitch`
+- Target: ES2020, module: ESNext, JSX: react-jsx
+- Path alias `@/*` maps to `./src/*`
+
+### Import Organization
+Group imports in this order, separated by blank lines:
+1. React and third-party libraries
+2. Internal stores and services
+3. Internal components
+4. Types (use `type` keyword for type-only imports)
+5. Constants
 
 ```typescript
-// ✅ Good import organization
-import React, { useEffect } from 'react';
-import { motion } from 'framer-motion';
-import { useThemeStore } from '@/stores/themeStore';
-import type { ColorScheme } from '@/types/theme';
-import { Header } from './Header';
+import { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Shuffle, Zap } from 'lucide-react';
+
+import { useThemeStore } from '../stores/themeStore';
+import { generateColorScheme } from '../services/colorEngine';
+import { ColorSwatch } from '../components/ui/ColorSwatch';
+import type { ColorScheme, SchemeStyle } from '../types/theme';
+import { SCHEME_STYLES } from '../constants/defaults';
 ```
 
 ### Component Structure
-- **Functional components**: Use function declarations or const arrow functions
-- **TypeScript**: Always type component props and return types
-- **Naming**: Use PascalCase for component names, camelCase for variables and functions
-- **File naming**: Use PascalCase for component files (Header.tsx), camelCase for utilities
+- Named exports: `export function ComponentName()`
+- Hooks at the top, then render logic
 
 ```typescript
-// ✅ Component example
-export function Header(): JSX.Element {
-  const { activeTab, setActiveTab } = useThemeStore();
-  
-  return (
-    <header className="sticky top-0 z-50 bg-void/90 backdrop-blur-md border-b border-layer">
-      {/* content */}
-    </header>
-  );
+export function GeneratorPage() {
+  const { scheme, baseHue, setBaseHue } = useThemeStore();
+  const [localState, setLocalState] = useState('initial');
+  return <div className="space-y-6">{/* content */}</div>;
 }
 ```
 
 ### State Management (Zustand)
-- **Store structure**: Define clear interface with state and actions sections
-- **Type safety**: Full TypeScript typing for store state and actions
-- **Persistence**: Use Zustand's persist middleware for localStorage
-- **Actions**: Keep actions simple and focused
+- Define interface with State section first, then Actions section
+- Use `persist` middleware for localStorage persistence
+- Keep actions simple; complex logic belongs in services
 
 ```typescript
 interface ThemeStore {
   // State
   scheme: ColorScheme;
-  darkMode: boolean;
-  
+  isGenerating: boolean;
   // Actions
   setBaseHue: (hue: number) => void;
-  toggleDarkMode: () => void;
+  generate: () => void;
 }
 ```
 
 ### Styling (Tailwind CSS)
-- **Custom colors**: Use CSS custom properties defined in index.css
-- **Color palette**: Stick to the theme colors (void, surface, base, layer, dim, fg, cyan, accent, etc.)
-- **Dark mode**: Use `dark:` variants and the `dark` class
-- **Responsive**: Use Tailwind's responsive utilities (md:, lg:, etc.)
-- **Animation**: Use Framer Motion for UI animations
+- Use CSS custom properties via Tailwind theme extension
+- Primary palette: `void`, `surface`, `base`, `layer`, `dim`, `dim-brt`, `fg`, `cyan`, `accent`
+- Semantic colors: `success`, `warning`, `error` (with `-dim` variants)
+- Dark mode via `.dark` class on `<html>` element
 
 ```typescript
-// ✅ Using theme colors
-<div className="bg-void text-fg border border-layer">
-  <h2 className="text-cyan">Accent Heading</h2>
+<div className="border border-layer rounded-xl p-5 bg-surface">
+  <h2 className="font-mono text-xs tracking-[0.2em] text-cyan uppercase">// Title</h2>
 </div>
 ```
 
-### Error Handling
-- **Type safety**: Rely on TypeScript's strict mode to prevent runtime errors
-- **Validation**: Add runtime validation for external data/API responses
-- **Error boundaries**: Consider adding React Error Boundaries for component error handling
-- **User feedback**: Show loading states and error messages for async operations
+### Typography
+- Fonts: `font-sans` (DM Sans), `font-mono` (Space Mono), `font-display` (Orbitron)
+- Labels: `font-mono text-[10px] text-dim-brt uppercase tracking-widest`
+- Section headers: `font-mono text-xs tracking-[0.2em] text-cyan uppercase`
 
 ### File Organization
 ```
 src/
-├── components/          # Reusable UI components
-│   ├── layout/         # Layout components (Header, Footer)
-│   └── ui/             # Basic UI components (Logo, ThemeToggle)
-├── pages/              # Page-level components
-├── services/           # Business logic and API calls
-├── stores/             # Zustand state stores
-├── types/              # TypeScript type definitions
-├── constants/          # Constants and default values
-├── main.tsx            # App entry point
-├── App.tsx             # Main app component
-└── index.css           # Global styles and Tailwind base
+├── components/
+│   ├── layout/          # Header, Footer
+│   └── ui/              # Logo, ColorSwatch, ThemeToggle, PaletteSelector
+├── pages/               # GeneratorPage, AnalysisPage, ExportPage
+├── services/            # colorEngine, colorAnalyzer, themeExporters, perceptualColor
+├── stores/              # themeStore (Zustand)
+├── types/               # theme.ts (ColorScheme, AnalysisResult, etc.)
+├── constants/           # defaults.ts (DEFAULT_SCHEME, SCHEME_STYLES)
+├── main.tsx             # Entry point
+├── App.tsx              # Root component
+└── index.css            # Tailwind base + CSS custom properties
 ```
 
 ### Naming Conventions
-- **Components**: PascalCase (Header, ThemeToggle)
-- **Variables/Functions**: camelCase (baseHue, setDarkMode)
-- **Constants**: UPPER_SNAKE_CASE (DEFAULT_SCHEME, NAV_ITEMS)
-- **Types/Interfaces**: PascalCase (ColorScheme, AnalysisResult)
-- **CSS classes**: kebab-case (bg-void, text-fg)
+| Type | Convention | Example |
+|------|------------|---------|
+| Components | PascalCase | `GeneratorPage`, `ColorSwatch` |
+| Services | camelCase.ts | `colorEngine.ts` |
+| Stores | camelCase + Store | `themeStore.ts` |
+| Types/Interfaces | PascalCase | `ColorScheme` |
+| Constants | UPPER_SNAKE_CASE | `DEFAULT_SCHEME` |
+| CSS custom properties | kebab-case | `--accent-dim` |
+| Local state | camelCase with `set` prefix | `[baseHue, setBaseHue]` |
 
-### Performance Considerations
-- **Code splitting**: Vite automatically handles code splitting
-- **Lazy loading**: Consider lazy loading heavy components with React.lazy()
-- **Memoization**: Use React.memo() and useMemo() for expensive operations
-- **Bundle size**: Monitor bundle size and avoid large dependencies
+### Animation (Framer Motion)
+- Use `AnimatePresence` for page transitions with `mode="wait"`
+- Page transitions: `initial={{ opacity: 0, y: 12 }}`, `animate={{ opacity: 1, y: 0 }}`
+- Interactive elements: `whileTap={{ scale: 0.97 }}`
+- Layout animations: `layoutId` for shared elements
 
-### Git & Collaboration
-- **Commit messages**: Use clear, descriptive commit messages
-- **Branching**: Follow git-flow or similar branching strategy
-- **Code reviews**: All changes should be reviewed before merging
-- **Testing**: Add tests for new features and bug fixes
+### Error Handling
+- Leverage TypeScript strict mode to catch errors at compile time
+- UI components handle loading states with `isGenerating` pattern
+- User feedback via disabled states and status text
 
-### Development Notes
-- **Hot reload**: Development server supports hot reload for quick iteration
-- **Theme switching**: App supports light/dark mode switching
-- **Color generation**: Core feature is generating and analyzing color schemes
-- **OLED optimization**: Focus on black backgrounds and high contrast for OLED displays
+### Performance Guidelines
+- Use Vite's automatic code splitting
+- Memoize expensive calculations with `useMemo` when needed
+- Keep store subscriptions minimal (destructure only needed values)
+- Artificial delays for UX (e.g., 400ms generation) go in store actions
+
+### Git Conventions
+- Commit messages: present tense ("Add feature" not "Added feature")
+- No secrets in commits
+- Run `npx tsc --noEmit` before committing
+
+## Key Domain Concepts
+
+### Color Scheme Structure
+- `core`: UI colors (background, foreground, accent, cursor, selection)
+- `terminal`: ANSI 16-color palette (color0-color15)
+- Background is always `#000000` for OLED optimization
+
+### OLED Risk Levels
+`ultra-conservative` → `conservative` → `balanced` → `aggressive`
+
+### Scheme Styles
+`monochrome`, `complementary`, `triadic`, `analogous`, `split-complementary`, `tetradic`, `spectral`

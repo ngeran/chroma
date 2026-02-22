@@ -12,7 +12,7 @@ interface ThemeStore {
   savedSchemes: ColorScheme[];
   darkMode: boolean;
   isGenerating: boolean;
-  activeTab: 'generator' | 'analysis' | 'export';
+  activeTab: 'generator' | 'analysis' | 'export' | 'reader';
 
   // Generator params
   baseHue: number;
@@ -33,7 +33,7 @@ interface ThemeStore {
   saveScheme: () => void;
   loadScheme: (scheme: ColorScheme) => void;
   deleteScheme: (name: string) => void;
-  setActiveTab: (tab: 'generator' | 'analysis' | 'export') => void;
+  setActiveTab: (tab: 'generator' | 'analysis' | 'export' | 'reader') => void;
   runAnalysis: () => void;
 }
 

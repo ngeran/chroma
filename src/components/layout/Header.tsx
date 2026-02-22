@@ -5,6 +5,7 @@ import { motion } from 'framer-motion';
 
 const NAV_ITEMS = [
   { id: 'generator', label: 'Generator' },
+  { id: 'reader',    label: 'Reader'    },
   { id: 'analysis',  label: 'Analysis'  },
   { id: 'export',    label: 'Export'    },
 ] as const;
@@ -23,7 +24,7 @@ export function Header() {
           {NAV_ITEMS.map(({ id, label }) => (
             <motion.button
               key={id}
-              onClick={() => setActiveTab(id as 'generator' | 'analysis' | 'export')}
+              onClick={() => setActiveTab(id as 'generator' | 'reader' | 'analysis' | 'export')}
               className={`relative px-5 py-2 font-mono text-xs tracking-[0.15em] uppercase transition-colors ${
                 activeTab === id ? 'text-cyan' : 'text-dim-brt hover:text-fg'
               }`}

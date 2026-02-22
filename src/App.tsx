@@ -1,6 +1,7 @@
 import { Header } from './components/layout/Header';
 import { Footer } from './components/layout/Footer';
 import { GeneratorPage } from './pages/GeneratorPage';
+import { ReaderPage } from './pages/ReaderPage';
 import { AnalysisPage }  from './pages/AnalysisPage';
 import { ExportPage }    from './pages/ExportPage';
 import { useThemeStore } from './stores/themeStore';
@@ -20,6 +21,7 @@ export default function App() {
 
   const pages: Record<string, React.ReactNode> = {
     generator: <GeneratorPage />,
+    reader:    <ReaderPage    />,
     analysis:  <AnalysisPage  />,
     export:    <ExportPage    />,
   };
