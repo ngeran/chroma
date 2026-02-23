@@ -1,27 +1,73 @@
 import { OKLAB, hexToOKLAB, oklabToHex, oklabToOKLCH } from './perceptualColor';
-import { ColorPalette, ColorScheme, SchemeStyle } from '@/types/theme';
+import type { ColorPalette, ColorScheme, OledRiskLevel } from '../types/theme';
 import { getPaletteById } from './predefinedPalettes';
 
 interface PaletteOptimizationOptions {
-  oledRiskLevel: 'ultra-conservative' | 'conservative' | 'balanced' | 'aggressive';
-  preserveSaturation: number; // 0-1, how much to preserve original saturation
-  preserveBrightness: number; // 0-1, how much to preserve original brightness
-  contrastBoost: number; // 0-1, how much to boost contrast
+  oledRiskLevel: OledRiskLevel;
+  preserveSaturation: number;
+  preserveBrightness: number;
+  contrastBoost: number;
 }
+
+interface OLEDThresholds {
+  maxForegroundL: number;
+  maxAccentL: number;
+  maxBrightAccentL: number;
+  maxDarkColorsL: number;
+  maxBrightColorsL: number;
+  maxChroma: number;
+  minContrastRatio: number;
+}
+
+const OLED_THRESHOLDS: Record<OledRiskLevel, OLEDThresholds> = {
+  'ultra-conservative': {
+    maxForegroundL: 0.35,
+    maxAccentL: 0.25,
+    maxBrightAccentL: 0.35,
+    maxDarkColorsL: 0.15,
+    maxBrightColorsL: 0.25,
+    maxChroma: 0.12,
+    minContrastRatio: 5.0,
+  },
+  conservative: {
+    maxForegroundL: 0.45,
+    maxAccentL: 0.35,
+    maxBrightAccentL: 0.45,
+    maxDarkColorsL: 0.20,
+    maxBrightColorsL: 0.35,
+    maxChroma: 0.18,
+    minContrastRatio: 4.5,
+  },
+  balanced: {
+    maxForegroundL: 0.55,
+    maxAccentL: 0.45,
+    maxBrightAccentL: 0.55,
+    maxDarkColorsL: 0.25,
+    maxBrightColorsL: 0.45,
+    maxChroma: 0.22,
+    minContrastRatio: 4.0,
+  },
+  aggressive: {
+    maxForegroundL: 0.65,
+    maxAccentL: 0.55,
+    maxBrightAccentL: 0.70,
+    maxDarkColorsL: 0.30,
+    maxBrightColorsL: 0.55,
+    maxChroma: 0.30,
+    minContrastRatio: 3.5,
+  },
+};
 
 export class PaletteOptimizer {
   private static DEFAULT_OPTIONS: PaletteOptimizationOptions = {
     oledRiskLevel: 'balanced',
-    preserveSaturation: 0.7,
-    preserveBrightness: 0.6,
-    contrastBoost: 0.3
+    preserveSaturation: 0.8,
+    preserveBrightness: 0.5,
+    contrastBoost: 0.2,
   };
 
-  /**
-   * Optimize a predefined palette for OLED displays
-   */
   static async optimizePalette(
-    paletteId: string, 
+    paletteId: string,
     options: Partial<PaletteOptimizationOptions> = {}
   ): Promise<ColorScheme> {
     const palette = getPaletteById(paletteId);
@@ -30,247 +76,203 @@ export class PaletteOptimizer {
     }
 
     const opts = { ...this.DEFAULT_OPTIONS, ...options };
-    
-    // Convert palette colors to OKLAB for processing
+    const thresholds = OLED_THRESHOLDS[opts.oledRiskLevel];
+
     const convertedColors = this.convertPaletteToOKLAB(palette);
-    
-    // Apply OLED optimizations
-    const optimizedColors = this.applyOLEDOptimizations(convertedColors, opts);
-    
-    // Generate terminal colors from the optimized palette
-    const terminalColors = this.generateTerminalColors(optimizedColors, palette.harmony);
-    
-    // Convert to ColorScheme format
+    const optimizedColors = this.applyOLEDOptimizations(convertedColors, thresholds, opts);
+    const terminalColors = this.generateTerminalColors(optimizedColors, thresholds);
+
     const colorScheme: ColorScheme = {
       name: `${palette.name} OLED`,
-      description: `${palette.description} - OLED optimized`,
+      description: `${palette.description} — ${opts.oledRiskLevel} OLED optimization`,
       seed: palette.name.toLowerCase().replace(/\s+/g, '-'),
       style: palette.harmony,
       hue: palette.baseHue,
       createdAt: new Date().toISOString(),
-      
+
       core: {
-        background: '#000000', // Always pure black for OLED
+        background: '#000000',
         foreground: oklabToHex(optimizedColors.foreground.L, optimizedColors.foreground.a, optimizedColors.foreground.b),
         accent: oklabToHex(optimizedColors.accent.L, optimizedColors.accent.a, optimizedColors.accent.b),
-        accent_bright: this.createBrightAccent(optimizedColors.accent),
+        accent_bright: oklabToHex(optimizedColors.accent_bright.L, optimizedColors.accent_bright.a, optimizedColors.accent_bright.b),
         cursor: oklabToHex(optimizedColors.accent.L, optimizedColors.accent.a, optimizedColors.accent.b),
-        selection_bg: oklabToHex(this.createSelectionBg(optimizedColors).L, this.createSelectionBg(optimizedColors).a, this.createSelectionBg(optimizedColors).b),
-        selection_fg: oklabToHex(optimizedColors.foreground.L, optimizedColors.foreground.a, optimizedColors.foreground.b)
+        selection_bg: oklabToHex(optimizedColors.selection_bg.L, optimizedColors.selection_bg.a, optimizedColors.selection_bg.b),
+        selection_fg: oklabToHex(optimizedColors.foreground.L, optimizedColors.foreground.a, optimizedColors.foreground.b),
       },
-      
-      terminal: terminalColors
+
+      terminal: terminalColors,
     };
-    
+
     return colorScheme;
   }
 
-  /**
-   * Convert all palette colors to OKLAB format
-   */
   private static convertPaletteToOKLAB(palette: ColorPalette): Record<string, OKLAB> {
     const converted: Record<string, OKLAB> = {};
-    
+
     Object.entries(palette.colors).forEach(([key, hex]) => {
       try {
         converted[key] = hexToOKLAB(hex);
-      } catch (error) {
-        console.warn(`Failed to convert color ${key}: ${hex}`, error);
-        // Fallback to a reasonable default
-        converted[key] = { L: 0.7, a: 0, b: 0 };
+      } catch {
+        converted[key] = { L: 0.5, a: 0, b: 0 };
       }
     });
-    
+
     return converted;
   }
 
-  /**
-   * Apply OLED-specific optimizations to the color palette
-   */
   private static applyOLEDOptimizations(
-    colors: Record<string, OKLAB>, 
+    colors: Record<string, OKLAB>,
+    thresholds: OLEDThresholds,
     options: PaletteOptimizationOptions
   ): Record<string, OKLAB> {
     const optimized: Record<string, OKLAB> = {};
-    
-    // Optimization thresholds based on risk level
-    const thresholds = this.getOptimizationThresholds(options.oledRiskLevel);
-    
-    Object.entries(colors).forEach(([key, color]) => {
-      let optimizedColor = { ...color };
-      
-      // 1. Reduce luminance for dark colors to prevent burn-in
-      if (this.isDarkColor(color)) {
-        optimizedColor.L = Math.max(color.L * (1 - thresholds.luminanceReduction), thresholds.minLuminance);
-      }
-      
-      // 2. Adjust chroma to balance saturation and OLED safety
-      if (options.preserveSaturation > 0) {
-        const lch = oklabToOKLCH(color.L, color.a, color.b);
-        const chromaFactor = Math.min(lch.C, thresholds.maxChroma) / Math.max(lch.C, 0.01);
-        const newChroma = lch.C * (options.preserveSaturation + (1 - options.preserveSaturation) * chromaFactor);
-        
-        // Convert back to OKLAB with adjusted chroma
-        const radians = lch.h * (Math.PI / 180);
-        optimizedColor.a = newChroma * Math.cos(radians);
-        optimizedColor.b = newChroma * Math.sin(radians);
-      }
-      
-      // 3. Boost contrast for important colors
-      if (['foreground', 'primary', 'accent'].includes(key) && options.contrastBoost > 0) {
-        optimizedColor.L = Math.min(optimizedColor.L + (options.contrastBoost * 0.1), 0.95);
-      }
-      
-      // 4. Ensure minimum visibility for all colors
-      optimizedColor = this.ensureMinimumVisibility(optimizedColor, key);
-      
-      optimized[key] = optimizedColor;
-    });
-    
+
+    const clampColor = (color: OKLAB, maxL: number, maxC: number): OKLAB => {
+      const lch = oklabToOKLCH(color.L, color.a, color.b);
+      const newL = Math.min(lch.L, maxL);
+      const newC = Math.min(lch.C * options.preserveSaturation, maxC);
+      const radians = lch.h * (Math.PI / 180);
+      return {
+        L: newL,
+        a: newC * Math.cos(radians),
+        b: newC * Math.sin(radians),
+      };
+    };
+
+    optimized.foreground = clampColor(
+      colors.foreground || colors.fg || { L: 0.6, a: 0, b: 0 },
+      thresholds.maxForegroundL,
+      thresholds.maxChroma
+    );
+
+    optimized.accent = clampColor(
+      colors.accent || colors.primary || { L: 0.4, a: 0.1, b: 0.1 },
+      thresholds.maxAccentL,
+      thresholds.maxChroma * 1.2
+    );
+
+    const brightAccentSource = colors.accent || colors.primary || { L: 0.5, a: 0.1, b: 0.1 };
+    optimized.accent_bright = clampColor(
+      { ...brightAccentSource, L: brightAccentSource.L * 1.15 },
+      thresholds.maxBrightAccentL,
+      thresholds.maxChroma * 1.3
+    );
+
+    optimized.background = { L: 0, a: 0, b: 0 };
+
+    const selectionSource = optimized.accent;
+    optimized.selection_bg = {
+      L: Math.min(selectionSource.L * 0.15, 0.08),
+      a: selectionSource.a * 0.3,
+      b: selectionSource.b * 0.3,
+    };
+
+    optimized.error = clampColor(
+      colors.error || { L: 0.35, a: 0.15, b: 0.08 },
+      thresholds.maxDarkColorsL * 1.5,
+      thresholds.maxChroma
+    );
+    optimized.warning = clampColor(
+      colors.warning || { L: 0.35, a: 0.1, b: 0.12 },
+      thresholds.maxDarkColorsL * 1.5,
+      thresholds.maxChroma
+    );
+    optimized.success = clampColor(
+      colors.success || { L: 0.35, a: -0.08, b: 0.1 },
+      thresholds.maxDarkColorsL * 1.5,
+      thresholds.maxChroma
+    );
+    optimized.info = clampColor(
+      colors.info || colors.primary || { L: 0.35, a: 0.05, b: 0.12 },
+      thresholds.maxDarkColorsL * 1.5,
+      thresholds.maxChroma
+    );
+    optimized.primary = clampColor(
+      colors.primary || { L: 0.35, a: 0.08, b: 0.1 },
+      thresholds.maxDarkColorsL * 1.5,
+      thresholds.maxChroma
+    );
+    optimized.secondary = clampColor(
+      colors.secondary || { L: 0.3, a: 0.05, b: 0.08 },
+      thresholds.maxDarkColorsL,
+      thresholds.maxChroma
+    );
+    optimized.dim = clampColor(
+      colors.dim || { L: 0.25, a: 0, b: 0 },
+      thresholds.maxDarkColorsL * 0.8,
+      thresholds.maxChroma * 0.5
+    );
+    optimized.layer = clampColor(
+      colors.layer || { L: 0.15, a: 0, b: 0 },
+      thresholds.maxDarkColorsL * 0.6,
+      thresholds.maxChroma * 0.3
+    );
+    optimized.surface = clampColor(
+      colors.surface || { L: 0.1, a: 0, b: 0 },
+      thresholds.maxDarkColorsL * 0.5,
+      0
+    );
+
     return optimized;
   }
 
-  /**
-   * Get optimization thresholds based on OLED risk level
-   */
-  private static getOptimizationThresholds(riskLevel: string) {
-    const thresholds = {
-      'ultra-conservative': {
-        luminanceReduction: 0.4,
-        minLuminance: 0.05,
-        maxChroma: 0.15,
-        minContrast: 4.5
-      },
-      'conservative': {
-        luminanceReduction: 0.25,
-        minLuminance: 0.08,
-        maxChroma: 0.2,
-        minContrast: 3.5
-      },
-      'balanced': {
-        luminanceReduction: 0.15,
-        minLuminance: 0.1,
-        maxChroma: 0.25,
-        minContrast: 3
-      },
-      'aggressive': {
-        luminanceReduction: 0.05,
-        minLuminance: 0.12,
-        maxChroma: 0.3,
-        minContrast: 2.5
-      }
-    };
-    
-    return thresholds[riskLevel as keyof typeof thresholds] || thresholds.balanced;
-  }
-
-  /**
-   * Check if a color is dark (low luminance)
-   */
-  private static isDarkColor(color: OKLAB): boolean {
-    return color.L < 0.3;
-  }
-
-  /**
-   * Ensure minimum visibility for colors
-   */
-  private static ensureMinimumVisibility(color: OKLAB, role: string): OKLAB {
-    const minLuminance = role === 'foreground' ? 0.7 : 
-                        role === 'accent' ? 0.5 : 
-                        role === 'background' ? 0.02 : 0.1;
-    
-    const maxChroma = role === 'foreground' ? 0.2 : 
-                     role === 'accent' ? 0.3 : 0.25;
-    
-    // Convert to OKLCH to check and adjust chroma
-    const lch = oklabToOKLCH(color.L, color.a, color.b);
-    const adjustedChroma = Math.min(lch.C, maxChroma);
-    
-    // Convert back to OKLAB with adjusted chroma
-    const radians = lch.h * (Math.PI / 180);
-    const adjustedA = adjustedChroma * Math.cos(radians);
-    const adjustedB = adjustedChroma * Math.sin(radians);
-    
-    return {
-      L: Math.max(color.L, minLuminance),
-      a: adjustedA,
-      b: adjustedB
-    };
-  }
-
-  /**
-   * Generate 16-color terminal palette from optimized colors
-   */
   private static generateTerminalColors(
-    colors: Record<string, OKLAB>, 
-    _harmony: SchemeStyle
-  ) {
-    // Dark colors (0-7)
-    const color0 = oklabToHex((colors.background || { L: 0.05, a: 0, b: 0 }).L, (colors.background || { L: 0.05, a: 0, b: 0 }).a, (colors.background || { L: 0.05, a: 0, b: 0 }).b);
-    const color1 = oklabToHex((colors.error || { L: 0.3, a: 0.2, b: 0.1 }).L, (colors.error || { L: 0.3, a: 0.2, b: 0.1 }).a, (colors.error || { L: 0.3, a: 0.2, b: 0.1 }).b);
-    const color2 = oklabToHex((colors.success || { L: 0.3, a: -0.1, b: 0.2 }).L, (colors.success || { L: 0.3, a: -0.1, b: 0.2 }).a, (colors.success || { L: 0.3, a: -0.1, b: 0.2 }).b);
-    const color3 = oklabToHex((colors.warning || { L: 0.3, a: 0.15, b: 0.1 }).L, (colors.warning || { L: 0.3, a: 0.15, b: 0.1 }).a, (colors.warning || { L: 0.3, a: 0.15, b: 0.1 }).b);
-    const color4 = oklabToHex((colors.primary || { L: 0.3, a: 0, b: 0.2 }).L, (colors.primary || { L: 0.3, a: 0, b: 0.2 }).a, (colors.primary || { L: 0.3, a: 0, b: 0.2 }).b);
-    const color5 = oklabToHex((colors.accent || { L: 0.3, a: 0.15, b: 0.1 }).L, (colors.accent || { L: 0.3, a: 0.15, b: 0.1 }).a, (colors.accent || { L: 0.3, a: 0.15, b: 0.1 }).b);
-    const color6 = oklabToHex((colors.info || { L: 0.3, a: 0, b: 0.15 }).L, (colors.info || { L: 0.3, a: 0, b: 0.15 }).a, (colors.info || { L: 0.3, a: 0, b: 0.15 }).b);
-    const color7 = oklabToHex((colors.foreground || { L: 0.8, a: 0, b: 0 }).L, (colors.foreground || { L: 0.8, a: 0, b: 0 }).a, (colors.foreground || { L: 0.8, a: 0, b: 0 }).b);
-    
-    // Bright colors (8-15) - increased luminance
-    const brighten = (color: OKLAB) => ({ ...color, L: Math.min(color.L + 0.2, 0.95) });
-    
-    const bgBright = brighten(colors.background || { L: 0.05, a: 0, b: 0 });
-    const errorBright = brighten(colors.error || { L: 0.3, a: 0.2, b: 0.1 });
-    const successBright = brighten(colors.success || { L: 0.3, a: -0.1, b: 0.2 });
-    const warningBright = brighten(colors.warning || { L: 0.3, a: 0.15, b: 0.1 });
-    const primaryBright = brighten(colors.primary || { L: 0.3, a: 0, b: 0.2 });
-    const accentBright = brighten(colors.accent || { L: 0.3, a: 0.15, b: 0.1 });
-    const infoBright = brighten(colors.info || { L: 0.3, a: 0, b: 0.15 });
-    const fgBright = brighten(colors.foreground || { L: 0.8, a: 0, b: 0 });
-    
-    const color8 = oklabToHex(bgBright.L, bgBright.a, bgBright.b);
-    const color9 = oklabToHex(errorBright.L, errorBright.a, errorBright.b);
-    const color10 = oklabToHex(successBright.L, successBright.a, successBright.b);
-    const color11 = oklabToHex(warningBright.L, warningBright.a, warningBright.b);
-    const color12 = oklabToHex(primaryBright.L, primaryBright.a, primaryBright.b);
-    const color13 = oklabToHex(accentBright.L, accentBright.a, accentBright.b);
-    const color14 = oklabToHex(infoBright.L, infoBright.a, infoBright.b);
-    const color15 = oklabToHex(fgBright.L, fgBright.a, fgBright.b);
-    
+    colors: Record<string, OKLAB>,
+    thresholds: OLEDThresholds
+  ): ColorScheme['terminal'] {
+    const darkBase = [
+      colors.background || { L: 0.02, a: 0, b: 0 },
+      colors.error || { L: 0.25, a: 0.12, b: 0.06 },
+      colors.success || { L: 0.25, a: -0.06, b: 0.08 },
+      colors.warning || { L: 0.25, a: 0.08, b: 0.1 },
+      colors.primary || { L: 0.25, a: 0.06, b: 0.1 },
+      colors.accent || { L: 0.25, a: 0.1, b: 0.08 },
+      colors.info || { L: 0.25, a: 0.04, b: 0.1 },
+      colors.foreground || { L: 0.4, a: 0, b: 0 },
+    ];
+
+    const clampDark = (c: OKLAB): OKLAB => ({
+      L: Math.min(c.L, thresholds.maxDarkColorsL),
+      a: c.a,
+      b: c.b,
+    });
+
+    const clampBright = (c: OKLAB): OKLAB => ({
+      L: Math.min(c.L + 0.08, thresholds.maxBrightColorsL),
+      a: c.a,
+      b: c.b,
+    });
+
+    const darkColors = darkBase.map(clampDark);
+    const brightColors = darkBase.map(clampBright);
+
+    const toHex = (c: OKLAB) => oklabToHex(c.L, c.a, c.b);
+
     return {
-      color0, color1, color2, color3, color4, color5, color6, color7,
-      color8, color9, color10, color11, color12, color13, color14, color15
+      color0: toHex(darkColors[0]),
+      color1: toHex(darkColors[1]),
+      color2: toHex(darkColors[2]),
+      color3: toHex(darkColors[3]),
+      color4: toHex(darkColors[4]),
+      color5: toHex(darkColors[5]),
+      color6: toHex(darkColors[6]),
+      color7: toHex(darkColors[7]),
+      color8: toHex(brightColors[0]),
+      color9: toHex(brightColors[1]),
+      color10: toHex(brightColors[2]),
+      color11: toHex(brightColors[3]),
+      color12: toHex(brightColors[4]),
+      color13: toHex(brightColors[5]),
+      color14: toHex(brightColors[6]),
+      color15: toHex(brightColors[7]),
     };
   }
 
-  /**
-   * Create a bright version of accent color
-   */
-  private static createBrightAccent(accent: OKLAB): string {
-    const brightAccent = { ...accent, L: Math.min(accent.L + 0.15, 0.95) };
-    return oklabToHex(brightAccent.L, brightAccent.a, brightAccent.b);
-  }
-
-  /**
-   * Create selection background color
-   */
-  private static createSelectionBg(colors: Record<string, OKLAB>): OKLAB {
-    // Create a subtle selection background using the accent color
-    const selectionL = Math.max(colors.foreground.L * 0.1, 0.05);
-    const selectionA = colors.accent.a * 0.3;
-    const selectionB = colors.accent.b * 0.3;
-    
-    return { L: selectionL, a: selectionA, b: selectionB };
-  }
-
-  /**
-   * Batch optimize multiple palettes
-   */
   static async optimizeMultiplePalettes(
-    paletteIds: string[], 
+    paletteIds: string[],
     options: Partial<PaletteOptimizationOptions> = {}
   ): Promise<ColorScheme[]> {
     const schemes: ColorScheme[] = [];
-    
     for (const paletteId of paletteIds) {
       try {
         const scheme = await this.optimizePalette(paletteId, options);
@@ -279,13 +281,9 @@ export class PaletteOptimizer {
         console.warn(`Failed to optimize palette ${paletteId}:`, error);
       }
     }
-    
     return schemes;
   }
 
-  /**
-   * Get available palette IDs
-   */
   static getAvailablePaletteIds(): string[] {
     return ['nord', 'tokyo_night', 'gruvbox', 'catppuccin', 'monokai', 'dracula'];
   }
