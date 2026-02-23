@@ -114,23 +114,24 @@ export function AnalysisPage() {
       {/* Luminance bar chart */}
       <section className="border border-layer rounded-xl p-5 bg-surface">
         <h3 className="font-mono text-[10px] tracking-widest text-accent-dim uppercase mb-4">// Luminance Profile (ANSI 16)</h3>
-        <div className="flex items-end gap-1.5 h-24">
+        <div className="h-20 flex items-end gap-1 overflow-hidden">
           {analysis.luminanceProfile.map((lum, i) => {
             const terminalColors = Object.values(scheme.terminal) as string[];
+            const height = Math.min(Math.max(lum, 4), 100);
             return (
               <motion.div
                 key={i}
                 initial={{ height: 0 }}
-                animate={{ height: `${Math.max(lum * 4, 2)}%` }}
+                animate={{ height: `${height}%` }}
                 transition={{ delay: i * 0.04, type: 'spring', stiffness: 200 }}
-                className="flex-1 rounded-t min-h-[2px]"
-                style={{ backgroundColor: terminalColors[i] ?? '#333', minHeight: 2 }}
+                className="flex-1 rounded-t"
+                style={{ backgroundColor: terminalColors[i] ?? '#333' }}
                 title={`color${i}: ${lum.toFixed(1)}%`}
               />
             );
           })}
         </div>
-        <div className="flex justify-between font-mono text-[9px] text-dim mt-1">
+        <div className="flex justify-between font-mono text-[9px] text-dim mt-2">
           <span>color0</span><span>color7</span><span>color8</span><span>color15</span>
         </div>
       </section>
