@@ -14,7 +14,7 @@ export function RatingBadge({ score, label }: Props) {
   return (
     <div className="flex flex-col items-center gap-1 p-3 border border-white/5 rounded bg-white/2">
       <div className="font-mono text-2xl font-bold" style={{ color }}>
-        {score}
+        {Math.round(score)}
         <span className="text-xs text-dim-brt">/100</span>
       </div>
       <div className="flex gap-0.5">
